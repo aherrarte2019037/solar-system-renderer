@@ -66,6 +66,9 @@ const PLANET_DATA = {
   }
 };
 
+const CAMERA_MOVE_SPEED = 10;
+const CAMERA_ZOOM_SPEED = 20;
+
 const SolarSystem = () => {
   const mountRef = useRef(null);
   const controlsRef = useRef(null);
@@ -101,18 +104,6 @@ const SolarSystem = () => {
       }
     });
   };
-
-  useEffect(() => {
-    const handleKeyPress = (event) => {
-      const planetEntry = Object.entries(KEYBINDS).find(([_, key]) => key === event.key);
-      if (planetEntry) {
-        focusOnPlanet(planetEntry[0]);
-      }
-    };
-
-    window.addEventListener('keypress', handleKeyPress);
-    return () => window.removeEventListener('keypress', handleKeyPress);
-  }, []);
 
   useEffect(() => {
     const scene = new THREE.Scene();
@@ -189,7 +180,6 @@ const SolarSystem = () => {
         shininess: 5
       });
       const planet = new THREE.Mesh(geometry, material);
-
       planet.position.x = data.distance;
 
       const orbitGeometry = new THREE.RingGeometry(data.distance, data.distance + 0.5, 128);
@@ -255,6 +245,63 @@ const SolarSystem = () => {
     );
     composer.addPass(bloomPass);
 
+    const handleKeyPress = (event) => {
+      const planetEntry = Object.entries(KEYBINDS).find(([_, key]) => key === event.key);
+      if (planetEntry) {
+        focusOnPlanet(planetEntry[0]);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (!controlsRef.current) return;
+
+      const camera = controlsRef.current.object;
+      const controls = controlsRef.current;
+
+      switch (event.key) {
+        case 'ArrowUp': {
+          const moveDistance = new THREE.Vector3(0, CAMERA_MOVE_SPEED, 0);
+          camera.position.add(moveDistance);
+          controls.target.add(moveDistance);
+          break;
+        }
+        case 'ArrowDown': {
+          const moveDistance = new THREE.Vector3(0, -CAMERA_MOVE_SPEED, 0);
+          camera.position.add(moveDistance);
+          controls.target.add(moveDistance);
+          break;
+        }
+        case 'ArrowLeft': {
+          const moveDistance = new THREE.Vector3(-CAMERA_MOVE_SPEED, 0, 0);
+          camera.position.add(moveDistance);
+          controls.target.add(moveDistance);
+          break;
+        }
+        case 'ArrowRight': {
+          const moveDistance = new THREE.Vector3(CAMERA_MOVE_SPEED, 0, 0);
+          camera.position.add(moveDistance);
+          controls.target.add(moveDistance);
+          break;
+        }
+        case '+':
+        case '=': {
+          const zoomDirection = new THREE.Vector3();
+          camera.getWorldDirection(zoomDirection);
+          camera.position.addScaledVector(zoomDirection, CAMERA_ZOOM_SPEED);
+          break;
+        }
+        case '-':
+        case '_': {
+          const zoomDirection = new THREE.Vector3();
+          camera.getWorldDirection(zoomDirection);
+          camera.position.addScaledVector(zoomDirection, -CAMERA_ZOOM_SPEED);
+          break;
+        }
+        default:
+          break;
+      }
+    };
+
     let animationFrameId;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -287,9 +334,13 @@ const SolarSystem = () => {
       composer.setSize(window.innerWidth, window.innerHeight);
     };
 
+    window.addEventListener('keypress', handleKeyPress);
+    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleResize);
 
     return () => {
+      window.removeEventListener('keypress', handleKeyPress);
+      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
       // eslint-disable-next-line react-hooks/exhaustive-deps
       mountRef.current?.removeChild(renderer.domElement);
