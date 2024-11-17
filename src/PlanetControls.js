@@ -4,7 +4,7 @@ import './PlanetControls.css';
 const PlanetControls = ({ selectedPlanet }) => {
   return (
     <div className="controls-panel">
-      <h3 className="controls-title">Planet Focus Controls</h3>
+      <h3 className="controls-title">Keybindings</h3>
       <div className="controls-list">
         {Object.entries(KEYBINDS).map(([planet, key]) => (
           <div
