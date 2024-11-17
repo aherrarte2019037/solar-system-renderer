@@ -1,10 +1,11 @@
-// components/SolarSystem.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import gsap from 'gsap';
+import PlanetControls, { KEYBINDS } from './PlanetControls';
 
 const PLANET_DATA = {
   sun: {
@@ -69,6 +70,49 @@ const SolarSystem = () => {
   const mountRef = useRef(null);
   const controlsRef = useRef(null);
   const planetsRef = useRef({});
+  const [selectedPlanet, setSelectedPlanet] = useState('sun');
+  const cameraTargetRef = useRef(new THREE.Vector3());
+
+  const focusOnPlanet = (planetName) => {
+    const planet = planetsRef.current[planetName];
+    if (!planet || !controlsRef.current) return;
+
+    setSelectedPlanet(planetName);
+
+    const targetPosition = new THREE.Vector3();
+    planet.getWorldPosition(targetPosition);
+    cameraTargetRef.current.copy(targetPosition);
+
+    const distance = PLANET_DATA[planetName].radius * 4;
+    const offset = new THREE.Vector3(distance, distance * 0.5, distance);
+
+    const currentPos = controlsRef.current.object.position.clone();
+    const targetPos = targetPosition.clone().add(offset);
+
+    gsap.to(currentPos, {
+      x: targetPos.x,
+      y: targetPos.y,
+      z: targetPos.z,
+      duration: 1.5,
+      ease: "power2.inOut",
+      onUpdate: () => {
+        controlsRef.current.object.position.copy(currentPos);
+        controlsRef.current.target.copy(targetPosition);
+      }
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      const planetEntry = Object.entries(KEYBINDS).find(([_, key]) => key === event.key);
+      if (planetEntry) {
+        focusOnPlanet(planetEntry[0]);
+      }
+    };
+
+    window.addEventListener('keypress', handleKeyPress);
+    return () => window.removeEventListener('keypress', handleKeyPress);
+  }, []);
 
   useEffect(() => {
     const scene = new THREE.Scene();
@@ -83,9 +127,9 @@ const SolarSystem = () => {
     camera.position.z = 200;
     camera.position.y = 100;
 
-    const renderer = new THREE.WebGLRenderer({ 
+    const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true 
+      alpha: true
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -95,19 +139,15 @@ const SolarSystem = () => {
     const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1);
     scene.add(ambientLight);
 
-    // Main sun light
     const sunLight = new THREE.PointLight(0xffffff, 2.5, 1000);
     scene.add(sunLight);
 
-    // Additional sun lighting effects
     const sunLightColor = new THREE.Color(0xffd7b0);
     const secondarySunLight = new THREE.PointLight(sunLightColor, 1.5, 500);
     scene.add(secondarySunLight);
 
-    // Load textures and create planets
     const textureLoader = new THREE.TextureLoader();
-    
-    // Create sun with special materials
+
     const sunGeometry = new THREE.SphereGeometry(PLANET_DATA.sun.radius, 64, 64);
     const sunTexture = textureLoader.load(PLANET_DATA.sun.texture);
     const sunMaterial = new THREE.MeshBasicMaterial({
@@ -119,7 +159,6 @@ const SolarSystem = () => {
     scene.add(sun);
     planetsRef.current.sun = sun;
 
-    // Create sun glow
     const sunGlowGeometry = new THREE.SphereGeometry(PLANET_DATA.sun.radius * 1.2, 64, 64);
     const sunGlowMaterial = new THREE.MeshBasicMaterial({
       color: 0xffdd66,
@@ -130,7 +169,6 @@ const SolarSystem = () => {
     const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
     scene.add(sunGlow);
 
-    // Outer glow
     const outerGlowGeometry = new THREE.SphereGeometry(PLANET_DATA.sun.radius * 1.4, 64, 64);
     const outerGlowMaterial = new THREE.MeshBasicMaterial({
       color: 0xff8833,
@@ -141,24 +179,21 @@ const SolarSystem = () => {
     const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
     scene.add(outerGlow);
 
-    // Create other planets
     Object.entries(PLANET_DATA).forEach(([planetName, data]) => {
-      if (planetName === 'sun') return; // Skip sun as we already created it
+      if (planetName === 'sun') return;
 
       const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
       const texture = textureLoader.load(data.texture);
-      const material = new THREE.MeshPhongMaterial({ 
+      const material = new THREE.MeshPhongMaterial({
         map: texture,
         shininess: 5
       });
       const planet = new THREE.Mesh(geometry, material);
 
-      // Position planets
       planet.position.x = data.distance;
-      
-      // Create orbit line
+
       const orbitGeometry = new THREE.RingGeometry(data.distance, data.distance + 0.5, 128);
-      const orbitMaterial = new THREE.MeshBasicMaterial({ 
+      const orbitMaterial = new THREE.MeshBasicMaterial({
         color: 0xd8d3cd,
         side: THREE.DoubleSide,
         transparent: true,
@@ -172,7 +207,6 @@ const SolarSystem = () => {
       planetsRef.current[planetName] = planet;
     });
 
-    // Enhanced star field
     const starsGeometry = new THREE.BufferGeometry();
     const starsMaterial = new THREE.PointsMaterial({
       color: 0xffffff,
@@ -181,7 +215,7 @@ const SolarSystem = () => {
       opacity: 0.8,
       sizeAttenuation: true
     });
-    
+
     const starsVertices = [];
     const starColors = [];
     for (let i = 0; i < 15000; i++) {
@@ -189,20 +223,19 @@ const SolarSystem = () => {
       const y = (Math.random() - 0.5) * 2000;
       const z = (Math.random() - 0.5) * 2000;
       starsVertices.push(x, y, z);
-      
+
       const starColor = new THREE.Color();
       starColor.setHSL(Math.random() * 0.2 + 0.5, 0.2, Math.random() * 0.2 + 0.8);
       starColors.push(starColor.r, starColor.g, starColor.b);
     }
-    
+
     starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
     starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
     starsMaterial.vertexColors = true;
-    
+
     const starField = new THREE.Points(starsGeometry, starsMaterial);
     scene.add(starField);
 
-    // Orbit controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -210,25 +243,22 @@ const SolarSystem = () => {
     controls.maxDistance = 500;
     controlsRef.current = controls;
 
-    // Post-processing
     const composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      1.5,  // Strength
-      0.4,  // Radius
-      0.85  // Threshold
+      1.5,
+      0.4,
+      0.85
     );
     composer.addPass(bloomPass);
 
-    // Animation loop
     let animationFrameId;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      
-      // Rotate planets
+
       Object.entries(planetsRef.current).forEach(([planetName, planet]) => {
         const data = PLANET_DATA[planetName];
         if (planetName !== 'sun') {
@@ -268,17 +298,20 @@ const SolarSystem = () => {
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      style={{
-        width: '100vw',
-        height: '100vh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        backgroundColor: '#000'
-      }}
-    />
+    <>
+      <PlanetControls selectedPlanet={selectedPlanet} />
+      <div
+        ref={mountRef}
+        style={{
+          width: '100vw',
+          height: '100vh',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          backgroundColor: '#000'
+        }}
+      />
+    </>
   );
 };
 
