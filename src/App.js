@@ -157,7 +157,7 @@ const SolarSystem = () => {
       planet.position.x = data.distance;
       
       // Create orbit line
-      const orbitGeometry = new THREE.RingGeometry(data.distance - 0.5, data.distance + 0.5, 128);
+      const orbitGeometry = new THREE.RingGeometry(data.distance, data.distance + 0.5, 128);
       const orbitMaterial = new THREE.MeshBasicMaterial({ 
         color: 0xd8d3cd,
         side: THREE.DoubleSide,
