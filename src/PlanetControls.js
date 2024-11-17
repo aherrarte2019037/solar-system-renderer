@@ -1,5 +1,6 @@
 import React from 'react';
 import './PlanetControls.css';
+import { KEYBINDS } from './Constants';
 
 const PlanetControls = ({ selectedPlanet }) => {
   return (
@@ -54,15 +55,3 @@ const PlanetControls = ({ selectedPlanet }) => {
 };
 
 export default PlanetControls;
-
-export const KEYBINDS = {
-  sun: '1',
-  mercury: '2',
-  venus: '3',
-  earth: '4',
-  mars: '5',
-  jupiter: '6',
-  saturn: '7',
-  uranus: '8',
-  neptune: '9'
-};
