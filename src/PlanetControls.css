@@ -1,0 +1,51 @@
+.controls-panel {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  color: white;
+  font-family: monospace;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.controls-title {
+  font-size: 18px;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-item.selected {
+  color: #fbbf24;
+}
+
+.key-bind {
+  padding: 4px 8px;
+  background-color: #374151;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.mouse-controls {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.mouse-controls div {
+  margin: 2px 0;
+}
